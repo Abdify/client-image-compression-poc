@@ -14,21 +14,10 @@ class ImageCompressionExperiment {
         const qualitySlider = document.getElementById('quality');
         const qualityValue = document.getElementById('qualityValue');
         const compressBtn = document.getElementById('compressBtn');
+        const bicCompressBtn = document.getElementById('bicCompressBtn');
+        const compareBtn = document.getElementById('compareBtn');
         const downloadBtn = document.getElementById('downloadBtn');
-        
-        // Add new button for browser-image-compression
-        const bicCompressBtn = document.createElement('button');
-        bicCompressBtn.id = 'bicCompressBtn';
-        bicCompressBtn.textContent = 'Compress with BIC';
-        compressBtn.parentNode.insertBefore(bicCompressBtn, downloadBtn);
-        
-        // Add new button for comparison
-        const compareBtn = document.createElement('button');
-        compareBtn.id = 'compareBtn';
-        compareBtn.textContent = 'Compare Both Methods';
-        compareBtn.disabled = true;
-        compressBtn.parentNode.insertBefore(compareBtn, downloadBtn);
-        
+               
         // Comparison tool buttons
         const sideBySideBtn = document.getElementById('sideBySideBtn');
         const sliderComparisonBtn = document.getElementById('sliderComparisonBtn');
@@ -115,11 +104,14 @@ class ImageCompressionExperiment {
         document.getElementById('maxHeight').value = img.naturalHeight;
     }
 
-    compressImage() {
+    // convert to a promise
+    async compressImage(showResult = true) {
         if (!this.originalFile) {
             alert('Please upload an image first.');
             return;
         }
+
+        return new Promise((resolve, reject) => {
 
         const quality = parseFloat(document.getElementById('quality').value);
         const maxWidth = parseInt(document.getElementById('maxWidth').value) || undefined;
@@ -130,6 +122,7 @@ class ImageCompressionExperiment {
         compressBtn.disabled = true;
         compressBtn.textContent = 'Compressing...';
 
+            
         new Compressor(this.originalFile, {
             quality: quality,
             maxWidth: maxWidth,
@@ -138,8 +131,11 @@ class ImageCompressionExperiment {
             convertTypes: ['image/png'],
             success: (result) => {
                 this.compressedBlob = result;
-                this.displayCompressedImage(result);
-                this.updateCompressedStats(result);
+                if(showResult) {
+                    this.hideComparisonContainer();
+                    this.displayCompressedImage(result);
+                    this.updateCompressedStats(result);
+                }
                 
                 compressBtn.disabled = false;
                 compressBtn.textContent = 'Compress Image';
@@ -147,6 +143,7 @@ class ImageCompressionExperiment {
                 // Enable comparison tools
                 document.getElementById('sideBySideBtn').disabled = false;
                 document.getElementById('sliderComparisonBtn').disabled = false;
+                resolve();
             },
             error: (err) => {
                 console.error('Compression failed:', err);
@@ -154,8 +151,10 @@ class ImageCompressionExperiment {
                 
                 compressBtn.disabled = false;
                 compressBtn.textContent = 'Compress Image';
+                reject(err);
             }
         });
+    })
     }
 
     // Update the displayCompressedImage method to show slider comparison by default
@@ -332,7 +331,7 @@ class ImageCompressionExperiment {
 
 
 // New method for browser-image-compression
-async compressWithBIC() {
+async compressWithBIC(showResult = true) {
     if (!this.originalFile) {
         alert('Please upload an image first.');
         return;
@@ -360,8 +359,12 @@ async compressWithBIC() {
         // Compress the image using browser-image-compression
         const compressedFile = await imageCompression(this.originalFile, options);
         this.bicCompressedBlob = compressedFile;
-        this.displayBICCompressedImage(compressedFile);
-        this.updateBICCompressedStats(compressedFile);
+
+        if(showResult) {
+            this.hideComparisonContainer();
+            this.displayBICCompressedImage(compressedFile);
+            this.updateBICCompressedStats(compressedFile);
+        } 
         
         bicCompressBtn.disabled = false;
         bicCompressBtn.textContent = 'Compress with BIC';
@@ -378,6 +381,11 @@ async compressWithBIC() {
         bicCompressBtn.disabled = false;
         bicCompressBtn.textContent = 'Compress with BIC';
     }
+}
+
+hideComparisonContainer() {
+    const container = document.getElementsByClassName('comparison-container')[0];
+    if(container) container.style.display = 'none';
 }
 
 // Display the BIC compressed image
@@ -422,89 +430,92 @@ updateBICCompressedStats(blob) {
 }
 
 // Compare both compression methods
-compareBothMethods() {
-    if (!this.compressedBlob || !this.bicCompressedBlob) {
-        alert('Please compress the image with both methods first.');
-        return;
-    }
+async compareBothMethods() {
+    await this.compressImage(false); // Compress with CompressorJS
+    await this.compressWithBIC(false); // Compress with BIC
 
-    // Create a comparison container
-    const container = document.createElement('div');
-    container.className = 'comparison-container';
-    container.style.display = 'grid';
-    container.style.gridTemplateColumns = '1fr 1fr';
-    container.style.gap = '20px';
-    container.style.margin = '20px 0';
-    container.style.gridColumn = '1 / span 2';
+    document.getElementById('compressedImage').style.display = 'none';
+    document.getElementById('compressedStats').style.display = 'none';
+        
+        // Create a comparison container
+        const container = document.createElement('div');
+        container.className = 'comparison-container';
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = '1fr 1fr';
+        container.style.gap = '20px';
+        container.style.margin = '20px 0';
+        container.style.gridColumn = '1 / span 2';
+    
+        // Create CompressorJS section
+        const compressorSection = document.createElement('div');
+        compressorSection.innerHTML = `
+            <h3>CompressorJS Result</h3>
+            <div class="image-preview">
+                <img id="compressorResult" alt="CompressorJS Result">
+            </div>
+            <div class="stats">
+                <p>Size: <span id="compressorSize">-</span></p>
+                <p>Compression Ratio: <span id="compressorRatio">-</span></p>
+                <p>Size Reduction: <span id="compressorReduction">-</span></p>
+            </div>
+        `;
+    
+        // Create BIC section
+        const bicSection = document.createElement('div');
+        bicSection.innerHTML = `
+            <h3>Browser Image Compression Result</h3>
+            <div class="image-preview">
+                <img id="bicResult" alt="BIC Result">
+            </div>
+            <div class="stats">
+                <p>Size: <span id="bicSize">-</span></p>
+                <p>Compression Ratio: <span id="bicRatio">-</span></p>
+                <p>Size Reduction: <span id="bicReduction">-</span></p>
+            </div>
+        `;
+    
+        // Add sections to container
+        container.appendChild(compressorSection);
+        container.appendChild(bicSection);
+    
+        // Add container to the document
+        const comparisonTools = document.querySelector('.comparison-tools');
+        comparisonTools.parentNode.insertBefore(container, comparisonTools.nextSibling);
+    
+        // Display images and update stats
+        const compressorImg = document.getElementById('compressorResult');
+        const bicImg = document.getElementById('bicResult');
+    
+        // Display CompressorJS result
+        const compressorReader = new FileReader();
+        compressorReader.onload = (e) => {
+            compressorImg.src = e.target.result;
+            document.getElementById('compressorSize').textContent = this.formatFileSize(this.compressedBlob.size);
+            const compressorRatio = (this.originalFile.size / this.compressedBlob.size).toFixed(2);
+            const compressorReduction = (((this.originalFile.size - this.compressedBlob.size) / this.originalFile.size) * 100).toFixed(1);
+            document.getElementById('compressorRatio').textContent = `${compressorRatio}:1`;
+            document.getElementById('compressorReduction').textContent = `${compressorReduction}%`;
+        };
+        compressorReader.readAsDataURL(this.compressedBlob);
+    
+        // Display BIC result
+        const bicReader = new FileReader();
+        bicReader.onload = (e) => {
+            bicImg.src = e.target.result;
+            document.getElementById('bicSize').textContent = this.formatFileSize(this.bicCompressedBlob.size);
+            const bicRatio = (this.originalFile.size / this.bicCompressedBlob.size).toFixed(2);
+            const bicReduction = (((this.originalFile.size - this.bicCompressedBlob.size) / this.originalFile.size) * 100).toFixed(1);
+            document.getElementById('bicRatio').textContent = `${bicRatio}:1`;
+            document.getElementById('bicReduction').textContent = `${bicReduction}%`;
+        };
+        bicReader.readAsDataURL(this.bicCompressedBlob);
+    
+        bicReader.onloadend = () => {
+            // Show the comparison view
+            this.showSliderComparison('compressorResult', 'bicResult');
+        };
+        
 
-    // Create CompressorJS section
-    const compressorSection = document.createElement('div');
-    compressorSection.innerHTML = `
-        <h3>CompressorJS Result</h3>
-        <div class="image-preview">
-            <img id="compressorResult" alt="CompressorJS Result">
-        </div>
-        <div class="stats">
-            <p>Size: <span id="compressorSize">-</span></p>
-            <p>Compression Ratio: <span id="compressorRatio">-</span></p>
-            <p>Size Reduction: <span id="compressorReduction">-</span></p>
-        </div>
-    `;
-
-    // Create BIC section
-    const bicSection = document.createElement('div');
-    bicSection.innerHTML = `
-        <h3>Browser Image Compression Result</h3>
-        <div class="image-preview">
-            <img id="bicResult" alt="BIC Result">
-        </div>
-        <div class="stats">
-            <p>Size: <span id="bicSize">-</span></p>
-            <p>Compression Ratio: <span id="bicRatio">-</span></p>
-            <p>Size Reduction: <span id="bicReduction">-</span></p>
-        </div>
-    `;
-
-    // Add sections to container
-    container.appendChild(compressorSection);
-    container.appendChild(bicSection);
-
-    // Add container to the document
-    const comparisonTools = document.querySelector('.comparison-tools');
-    comparisonTools.parentNode.insertBefore(container, comparisonTools.nextSibling);
-
-    // Display images and update stats
-    const compressorImg = document.getElementById('compressorResult');
-    const bicImg = document.getElementById('bicResult');
-
-    // Display CompressorJS result
-    const compressorReader = new FileReader();
-    compressorReader.onload = (e) => {
-        compressorImg.src = e.target.result;
-        document.getElementById('compressorSize').textContent = this.formatFileSize(this.compressedBlob.size);
-        const compressorRatio = (this.originalFile.size / this.compressedBlob.size).toFixed(2);
-        const compressorReduction = (((this.originalFile.size - this.compressedBlob.size) / this.originalFile.size) * 100).toFixed(1);
-        document.getElementById('compressorRatio').textContent = `${compressorRatio}:1`;
-        document.getElementById('compressorReduction').textContent = `${compressorReduction}%`;
-    };
-    compressorReader.readAsDataURL(this.compressedBlob);
-
-    // Display BIC result
-    const bicReader = new FileReader();
-    bicReader.onload = (e) => {
-        bicImg.src = e.target.result;
-        document.getElementById('bicSize').textContent = this.formatFileSize(this.bicCompressedBlob.size);
-        const bicRatio = (this.originalFile.size / this.bicCompressedBlob.size).toFixed(2);
-        const bicReduction = (((this.originalFile.size - this.bicCompressedBlob.size) / this.originalFile.size) * 100).toFixed(1);
-        document.getElementById('bicRatio').textContent = `${bicRatio}:1`;
-        document.getElementById('bicReduction').textContent = `${bicReduction}%`;
-    };
-    bicReader.readAsDataURL(this.bicCompressedBlob);
-
-    bicReader.onloadend = () => {
-        // Show the comparison view
-        this.showSliderComparison('compressorResult', 'bicResult');
-    };
 }
 
 }

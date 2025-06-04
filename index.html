@@ -96,6 +96,9 @@
             cursor: pointer;
             margin: 5px;
         }
+        button#compareBtn {
+            background: #28a745;
+        }
 
         button:hover {
             background: #0056b3;
@@ -170,6 +173,19 @@
         img-comparison-slider.rendered [slot='second'] {
             display: unset;
         }
+
+        .compression-controls-btns {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .compare-btn-divider {
+            height: 2rem;
+            width: 2px;
+            background-color: #ccc;
+            margin: 0 10px;
+        }
     </style>
 
     <!-- Add img-comparison-slider styles -->
@@ -202,7 +218,7 @@
         </div>
 
         <div class="compressed-section">
-            <h2>Compressed Image</h2>
+            <h2>Compress Image</h2>
             <div class="compression-controls">
                 <div class="control-group">
                     <label for="quality">Quality:</label>
@@ -225,8 +241,15 @@
                         <option value="image/png">PNG</option>
                     </select>
                 </div>
-                <button id="compressBtn">Compress Image</button>
-                <button id="downloadBtn" disabled>Download Compressed</button>
+                <div class="compression-controls-btns">
+                    <button id="compareBtn">Compress & Compare Two Methods</button>
+                    <div class="compare-btn-divider"></div>
+                    <div>
+                        <button id="compressBtn">Use CompressorJS</button>
+                        <button id="bicCompressBtn">Use Browser-Image-Compression</button>
+                        <button id="downloadBtn" disabled>Download Compressed Image</button>
+                    </div>
+                </div>
             </div>
 
             <div class="image-section">
